@@ -5,11 +5,18 @@ using GitProfile.Core;
 using Microsoft.Win32;
 using Wpf = System.Windows;
 
+
 namespace GitProfile.App;
 
 public partial class App : Wpf.Application
 {
     private const uint AttachParentProcess = 0x0000_0003;
+
+    private readonly ThemeSettings _settings = new(AppPaths.SettingsFile());
+    private AppTheme _mode;
+
+    /// <summary>Raised after the palette has been swapped, so open windows can match their chrome to it.</summary>
+    internal event Action? ThemeChanged;
 
     [DllImport("kernel32.dll")]
     private static extern bool AttachConsole(uint dwProcessId);
@@ -36,6 +43,7 @@ public partial class App : Wpf.Application
             return;
         }
 
+        _mode = _settings.Load();
         ApplyTheme();
         Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         Exit += (_, _) => Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
@@ -45,18 +53,34 @@ public partial class App : Wpf.Application
         window.Show();
     }
 
+    public static App Self => (App)Current;
+
+    internal AppTheme Mode => _mode;
+
+    /// <summary>Stores a new choice, swaps the palette and lets windows follow.</summary>
+    internal void SetTheme(AppTheme mode)
+    {
+        if (_mode == mode)
+            return;
+
+        _mode = mode;
+        _settings.Save(mode);
+        ApplyTheme();
+        ThemeChanged?.Invoke();
+    }
+
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {
-        if (e.Category is UserPreferenceCategory.General)
+        if (e.Category is UserPreferenceCategory.General && _mode == AppTheme.System)
             ApplyTheme();
     }
 
-    /// <summary>Swaps the colour dictionary so the window follows the Windows light or dark setting.</summary>
+    /// <summary>Swaps the colour dictionary to match the chosen theme, or the Windows one when set to follow.</summary>
     private void ApplyTheme()
     {
         var palette = new Wpf.ResourceDictionary
         {
-            Source = Pack(ThemePrefersDark() ? "Palette.Dark.xaml" : "Palette.Light.xaml"),
+            Source = Pack(EffectivePrefersDark() ? "Palette.Dark.xaml" : "Palette.Light.xaml"),
         };
 
         if (Resources.MergedDictionaries.Count == 0)
@@ -69,13 +93,24 @@ public partial class App : Wpf.Application
         Resources.MergedDictionaries[0] = palette;
     }
 
-    /// <summary>Follows the Windows app theme, unless GITPROFILE_THEME says light or dark.</summary>
-    internal static bool ThemePrefersDark()
+    /// <summary>The palette in use right now: GITPROFILE_THEME first, then the user's choice, then Windows.</summary>
+    internal static bool EffectivePrefersDark()
     {
         var forced = Environment.GetEnvironmentVariable("GITPROFILE_THEME");
         if (forced is not null)
             return forced.Trim().Equals("dark", StringComparison.OrdinalIgnoreCase);
 
+        return Self._mode switch
+        {
+            AppTheme.Dark => true,
+            AppTheme.Light => false,
+            _ => SystemPrefersDark(),
+        };
+    }
+
+    /// <summary>What the Windows light or dark app setting says.</summary>
+    private static bool SystemPrefersDark()
+    {
         var value = Registry.CurrentUser
             .OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
             ?.GetValue("AppsUseLightTheme");

@@ -15,7 +15,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- The exe, title bar and tray all show this one glyph. -->
     <ApplicationIcon>GitProfile.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>GitProfile</Product>
     <Description>Pick which GitHub account git pushes as, so Git Credential Manager stops asking.</Description>
   </PropertyGroup>

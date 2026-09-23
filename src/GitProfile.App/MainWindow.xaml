@@ -28,14 +28,26 @@
                 <TextBlock Style="{StaticResource SubtitleText}" Margin="0,3,0,0"
                            Text="Choose the GitHub account git pushes as, so Git Credential Manager stops asking on every push." />
             </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource Badge}" Margin="16,0,0,0"
-                    Background="{DynamicResource Brush.SuccessBg}" VerticalAlignment="Center"
-                    Visibility="{Binding HasEffectiveLogin, Converter={StaticResource IfTrue}}">
-                <TextBlock Style="{StaticResource BadgeText}"
-                           Foreground="{DynamicResource Brush.Success}"
-                           FontSize="11.5"
-                           Text="{Binding EffectiveLogin, StringFormat=git uses {0}}" />
-            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                <Border Style="{StaticResource Badge}" Background="{DynamicResource Brush.SuccessBg}"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding HasEffectiveLogin, Converter={StaticResource IfTrue}}">
+                    <TextBlock Style="{StaticResource BadgeText}"
+                               Foreground="{DynamicResource Brush.Success}"
+                               FontSize="11.5"
+                               Text="{Binding EffectiveLogin, StringFormat=git uses {0}}" />
+                </Border>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="Theme" Style="{StaticResource SectionLabel}" />
+                    <RadioButton x:Name="ThemeSystemChip" Style="{StaticResource ThemeChip}" Content="System"
+                                 GroupName="Theme" Margin="8,0,0,0" Checked="OnThemeChosen" Tag="System"
+                                 ToolTip="Follow the Windows light or dark setting" />
+                    <RadioButton x:Name="ThemeLightChip" Style="{StaticResource ThemeChip}" Content="Light"
+                                 GroupName="Theme" Checked="OnThemeChosen" Tag="Light" />
+                    <RadioButton x:Name="ThemeDarkChip" Style="{StaticResource ThemeChip}" Content="Dark"
+                                 GroupName="Theme" Checked="OnThemeChosen" Tag="Dark" />
+                </StackPanel>
+            </StackPanel>
         </Grid>
 
         <!-- Scrollable body -->
