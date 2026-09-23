@@ -1,0 +1,205 @@
+<Window x:Class="GitProfile.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GitProfile - which GitHub account should git use?"
+        Width="840" Height="720" MinWidth="620" MinHeight="520"
+        WindowStartupLocation="CenterScreen"
+        Icon="GitProfile.ico"
+        Background="{DynamicResource Brush.Window}"
+        FontFamily="{StaticResource Font.Ui}" FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Margin="24,20,24,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Git profiles" Style="{StaticResource TitleText}" />
+                <TextBlock Style="{StaticResource SubtitleText}" Margin="0,3,0,0"
+                           Text="Choose the GitHub account git pushes as, so Git Credential Manager stops asking on every push." />
+            </StackPanel>
+            <Border Grid.Column="1" Style="{StaticResource Badge}" Margin="16,0,0,0"
+                    Background="{DynamicResource Brush.SuccessBg}" VerticalAlignment="Center"
+                    Visibility="{Binding HasEffectiveLogin, Converter={StaticResource IfTrue}}">
+                <TextBlock Style="{StaticResource BadgeText}"
+                           Foreground="{DynamicResource Brush.Success}"
+                           FontSize="11.5"
+                           Text="{Binding EffectiveLogin, StringFormat=git uses {0}}" />
+            </Border>
+        </Grid>
+
+        <!-- Scrollable body -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,0,24,16">
+            <StackPanel>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="SIGNED IN ON THIS MACHINE" Style="{StaticResource SectionLabel}" />
+                                <Border Style="{StaticResource Badge}" Margin="8,0,0,0"
+                                        Width="22" Padding="0,2" HorizontalAlignment="Center">
+                                    <TextBlock Style="{StaticResource BadgeText}"
+                                               Text="{Binding Accounts.Count}"
+                                               HorizontalAlignment="Center" />
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Style="{StaticResource GhostButton}" Content="Add account"
+                                        Click="OnAddAccount" ToolTip="Sign in another GitHub account with Git Credential Manager" />
+                                <Button Style="{StaticResource GhostButton}" Content="Forget selected" Margin="8,0,0,0"
+                                        Click="OnRemoveAccount" IsEnabled="{Binding HasSelection}"
+                                        ToolTip="Remove this account's saved sign-in from Windows" />
+                                <Button Style="{StaticResource GhostButton}" Content="Refresh" Margin="8,0,0,0"
+                                        Click="OnRefresh" />
+                            </StackPanel>
+                        </Grid>
+
+                        <ListBox Style="{StaticResource AccountList}"
+                                 ItemsSource="{Binding Rows}"
+                                 SelectedValuePath="Login"
+                                 SelectedValue="{Binding Selected, Mode=TwoWay}"
+                                 MinHeight="112"
+                                 Visibility="{Binding HasAccounts, Converter={StaticResource IfTrue}}" />
+
+                        <TextBlock x:Name="EmptyList"
+                                   Style="{StaticResource HelpText}"
+                                   Margin="2,4"
+                                   Text="No GitHub account is signed in on this machine yet. Press Add account and finish Git Credential Manager's sign-in; it will appear here."
+                                   Visibility="{Binding HasAccounts, Converter={StaticResource IfFalse}}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="WHERE SHOULD GIT USE IT" Style="{StaticResource SectionLabel}" />
+                            <Button Grid.Column="1" Style="{StaticResource GhostButton}" Content="This repository…"
+                                    Padding="10,5" Click="OnChooseRepository"
+                                    ToolTip="Work on a repository other than the folder GitProfile was started from" />
+                        </Grid>
+
+                        <CheckBox Style="{StaticResource ChoiceCard}" IsChecked="{Binding AsDefault, Mode=TwoWay}">
+                            <StackPanel>
+                                <TextBlock Text="Everywhere, as my default account" Style="{StaticResource BodyText}" FontWeight="SemiBold" />
+                                <TextBlock Style="{StaticResource HelpText}" Margin="0,2,0,0"
+                                           Text="Written to your user-level git config: every terminal, IDE and repository uses it, and it stays applied after GitProfile closes." />
+                            </StackPanel>
+                        </CheckBox>
+
+                        <CheckBox Style="{StaticResource ChoiceCard}" IsChecked="{Binding PinRepository, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanPinRepository}"
+                                  ToolTip="Open GitProfile from inside a repository to pin it there">
+                            <StackPanel>
+                                <TextBlock Text="Only this repository" Style="{StaticResource BodyText}" FontWeight="SemiBold" />
+                                <TextBlock Style="{StaticResource HelpText}" Margin="0,2,0,0"
+                                           Text="A pin beats the default, so repositories from two accounts stop overwriting each other's sign-in." />
+                            </StackPanel>
+                        </CheckBox>
+
+                        <TextBlock Style="{StaticResource HelpText}" FontSize="11" Margin="2,0,0,8"
+                                   Text="Not inside a git repository - open GitProfile from a repository folder to pin it there."
+                                   Visibility="{Binding InRepository, Converter={StaticResource IfFalse}}" />
+
+                        <StackPanel Orientation="Horizontal" Visibility="{Binding InRepository, Converter={StaticResource IfTrue}}">
+                            <TextBlock Style="{StaticResource MonoText}"
+                                       FontSize="11.5"
+                                       Foreground="{DynamicResource Brush.Text.Secondary}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="440"
+                                       Text="{Binding RepoRoot}" />
+                            <TextBlock Style="{StaticResource HelpText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       Text="{Binding OriginOwner, StringFormat=origin is {0}}" />
+                            <Button Style="{StaticResource GhostButton}" Content="Stop pinning" Margin="12,0,0,0"
+                                    Padding="10,5" Click="OnUnpin"
+                                    Visibility="{Binding CanUnpin, Converter={StaticResource IfTrue}}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Visibility="{Binding HasSelection, Converter={StaticResource IfTrue}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionLabel}" Margin="0,0,0,10"
+                                   Text="HOW THIS ACCOUNT SIGNS COMMITS" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HelpText}" Margin="0,0,0,4" Text="Name" />
+                                <TextBox Style="{StaticResource Field}" Text="{Binding CommitName, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource HelpText}" Margin="0,0,0,4" Text="Email" />
+                                <TextBox Style="{StaticResource Field}" Text="{Binding CommitEmail, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Style="{StaticResource GhostButton}" Content="Save identity" Click="OnSaveIdentity" />
+                            <TextBlock Style="{StaticResource HelpText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                       Text="Saved with the account, and applied whenever it becomes a default or a pin." />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Visibility="{Binding CanApply, Converter={StaticResource IfTrue}}">
+                    <StackPanel>
+                        <TextBlock Text="COMMANDS TO RUN" Style="{StaticResource SectionLabel}" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding Preview}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Style="{StaticResource MonoText}" FontSize="11.5" Margin="0,1"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource HelpText}" Margin="0,8,0,0"
+                                   Text="Nothing in your git config changes until you press Apply. What Apply writes lands in your user profile, so closing GitProfile does not undo it - and Git Credential Manager keeps your tokens; this only picks which account to use." />
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Sticky footer: Apply is reachable no matter how far the window is shrunk. -->
+        <Border Grid.Row="2" Background="{DynamicResource Brush.Card}"
+                BorderBrush="{DynamicResource Brush.CardBorder}" BorderThickness="0,1,0,0">
+            <Grid Margin="24,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Margin="0,0,16,0"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource Brush.Text.Secondary}"
+                           FontSize="12.5"
+                           Text="{Binding Headline}" />
+                <Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Content="Apply"
+                        IsDefault="True" Click="OnApply"
+                        IsEnabled="{Binding CanApply}" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
